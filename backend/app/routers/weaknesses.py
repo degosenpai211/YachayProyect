@@ -1,4 +1,6 @@
-from fastapi import APIRouter, Depends
+from datetime import datetime
+
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
@@ -64,3 +66,29 @@ def list_weaknesses(course: str | None = None, db: Session = Depends(get_db)):
         )
         for w, s in rows
     ]
+
+
+@router.post("/weaknesses/{weakness_id}/resolve", response_model=WeaknessOut)
+def resolve_weakness(weakness_id: int, db: Session = Depends(get_db)):
+    row = db.execute(
+        select(Weakness, Student)
+        .join(Student, Student.id == Weakness.student_id)
+        .where(Weakness.id == weakness_id)
+    ).first()
+    if not row:
+        raise HTTPException(status_code=404, detail="Debilidad no encontrada")
+    w, s = row
+    w.active = False
+    w.updated_at = datetime.utcnow()
+    db.commit()
+    db.refresh(w)
+    return WeaknessOut(
+        id=w.id,
+        student_id=w.student_id,
+        student_code=s.code,
+        student_name=s.display_name,
+        topic=w.topic,
+        hit_count=w.hit_count,
+        active=w.active,
+        updated_at=w.updated_at,
+    )

@@ -58,6 +58,8 @@ class Experiment(Base):
     materials: Mapped[str] = mapped_column(Text)
     steps: Mapped[str] = mapped_column(Text)
     explanation: Mapped[str] = mapped_column(Text)
+    status: Mapped[str] = mapped_column(String(20), default="pending")  # pending | done
+    feedback: Mapped[str] = mapped_column(Text, default="")
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
 
     student: Mapped["Student"] = relationship(back_populates="experiments")

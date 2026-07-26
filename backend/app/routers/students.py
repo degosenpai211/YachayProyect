@@ -74,6 +74,8 @@ def get_student(code: str, db: Session = Depends(get_db)):
                 "materials": e.materials,
                 "steps": e.steps,
                 "explanation": e.explanation,
+                "status": getattr(e, "status", None) or "pending",
+                "feedback": getattr(e, "feedback", None) or "",
                 "created_at": e.created_at,
             }
             for e in experiments

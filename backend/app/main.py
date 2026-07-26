@@ -6,7 +6,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import text
 
 from app.config import get_settings
-from app.database import Base, SessionLocal, engine
+from app.database import Base, SessionLocal, ensure_schema_upgrades, engine
 from app.routers import experiments, stats, students, weaknesses, webhook
 from app.seed import clear_demo_seed_data, seed_demo_data
 
@@ -20,6 +20,7 @@ logger = logging.getLogger("yachay")
 @asynccontextmanager
 async def lifespan(_: FastAPI):
     Base.metadata.create_all(bind=engine)
+    ensure_schema_upgrades()
     settings = get_settings()
     db = SessionLocal()
     try:
@@ -88,5 +89,5 @@ def health():
         "zavu": s.has_zavu,
         "telegram_bot": s.telegram_bot_username,
         # Si este valor no aparece en producción, Railway NO redeployó el código nuevo.
-        "code_version": "yachay-2026-07-26-v5",
+        "code_version": "yachay-2026-07-26-v6",
     }

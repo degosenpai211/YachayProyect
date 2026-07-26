@@ -69,9 +69,16 @@ class ExperimentOut(BaseModel):
     materials: str
     steps: str
     explanation: str
+    status: str = "pending"
+    feedback: str = ""
     created_at: datetime
 
     model_config = {"from_attributes": True}
+
+
+class ExperimentUpdate(BaseModel):
+    status: str | None = None  # pending | done
+    feedback: str | None = None
 
 
 class ZavuMessageData(BaseModel):

@@ -1,10 +1,12 @@
+import logging
 from collections.abc import Generator
 
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, inspect, text
 from sqlalchemy.orm import DeclarativeBase, Session, sessionmaker
 
 from app.config import get_settings
 
+logger = logging.getLogger("yachay.database")
 settings = get_settings()
 
 
@@ -32,6 +34,26 @@ SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 class Base(DeclarativeBase):
     pass
+
+
+def ensure_schema_upgrades() -> None:
+    """create_all no añade columnas nuevas; migraciones mínimas aquí."""
+    try:
+        insp = inspect(engine)
+        if "experiments" not in insp.get_table_names():
+            return
+        cols = {c["name"] for c in insp.get_columns("experiments")}
+        with engine.begin() as conn:
+            if "status" not in cols:
+                conn.execute(
+                    text("ALTER TABLE experiments ADD COLUMN status VARCHAR(20) DEFAULT 'pending'")
+                )
+                logger.info("Migración: experiments.status añadida")
+            if "feedback" not in cols:
+                conn.execute(text("ALTER TABLE experiments ADD COLUMN feedback TEXT DEFAULT ''"))
+                logger.info("Migración: experiments.feedback añadida")
+    except Exception:
+        logger.exception("No se pudo aplicar migración liviana de experiments")
 
 
 def get_db() -> Generator[Session, None, None]:

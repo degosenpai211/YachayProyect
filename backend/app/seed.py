@@ -89,6 +89,8 @@ def seed_demo_data(db: Session) -> None:
             materials="Vaso, agua, huevo, sal",
             steps="1) Huevo en agua. 2) Agregar sal. 3) Observar flotación.",
             explanation="El agua salada es más densa y sostiene al huevo.",
+            status="pending",
+            feedback="",
         )
     )
     db.commit()

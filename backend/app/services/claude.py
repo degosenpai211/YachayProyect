@@ -11,24 +11,41 @@ logger = logging.getLogger("yachay.claude")
 
 SYSTEM_PROMPT = """Eres Yachay, tutor escolar boliviano de ciencias para primaria/secundaria.
 Responde en español claro, máximo 120 palabras.
-Estructura SIEMPRE:
+Estructura SIEMPRE cuando el tema SÍ encaje:
 1) Explicación breve
 2) Un ejemplo boliviano concreto
 3) Una pregunta de chequeo corta
 
-Temas permitidos: densidad_flotacion, fotosintesis, estados_materia, electricidad_basica, sistema_digestivo.
-Si la duda no encaja, dilo amable y ofrece esos temas.
+Temas permitidos (usa exactamente estos ids en "topic"):
+- densidad_flotacion
+- fotosintesis
+- estados_materia
+- electricidad_basica
+- sistema_digestivo
+
+Si la duda NO encaja en esos temas:
+- pon "topic": null
+- en "reply" dilo amable y ofrece esos 5 temas (sin inventar otro topic_id)
+- "off_topic": true
+
+Usa el historial reciente (si viene) para no repetir y seguir la conversación.
 
 Responde SOLO JSON válido:
 {
   "topic": "topic_id o null",
   "reply": "texto para el estudiante",
-  "needs_experiment": true/false
+  "needs_experiment": true/false,
+  "off_topic": true/false
 }
 """
 
 
-async def generate_tutor_reply(user_text: str, weakness: bool, topic_hint: str | None = None) -> dict:
+async def generate_tutor_reply(
+    user_text: str,
+    weakness: bool = False,
+    topic_hint: str | None = None,
+    history: list[dict] | None = None,
+) -> dict:
     """Prioridad: Claude (si hay créditos) -> Groq (gratis) -> plantillas locales."""
     settings = get_settings()
     user_payload = {
@@ -36,13 +53,12 @@ async def generate_tutor_reply(user_text: str, weakness: bool, topic_hint: str |
         "topic_hint": topic_hint,
         "weakness": weakness,
         "topics": {k: v["label"] for k, v in TOPICS.items()},
+        "historial": history or [],
     }
 
     raw: str | None = None
 
     if settings.has_claude:
-        # Cliente de Anthropic es sincrono; se corre en un hilo aparte para no
-        # bloquear el event loop de FastAPI mientras espera la respuesta.
         raw = await asyncio.to_thread(_call_claude, user_payload, settings.anthropic_api_key)
 
     if raw is None and settings.has_groq:
@@ -56,12 +72,35 @@ async def generate_tutor_reply(user_text: str, weakness: bool, topic_hint: str |
         return _demo_reply(user_text, weakness, topic_hint)
 
     topic = parsed.get("topic")
+    off_topic = bool(parsed.get("off_topic"))
+    if topic in ("null", "", "None"):
+        topic = None
     if topic and topic not in TOPICS:
+        # Id inválido del modelo: intentar heurística; si no, off-topic
         topic = classify_topic_heuristic(user_text)
+        if not topic:
+            off_topic = True
+
+    # Si el modelo marca off_topic o deja topic null, NO forzar keyword match a ciegas
+    # (evita clasificar mal "hola" o preguntas de historia).
+    if off_topic or topic is None:
+        if topic is None and not off_topic:
+            # Sin señal clara: solo heurística como respaldo suave
+            topic = classify_topic_heuristic(user_text)
+        if topic is None:
+            return {
+                "topic": None,
+                "reply": parsed.get("reply")
+                or _demo_reply(user_text, weakness, topic_hint)["reply"],
+                "needs_experiment": False,
+                "off_topic": True,
+            }
+
     return {
-        "topic": topic or classify_topic_heuristic(user_text),
+        "topic": topic,
         "reply": parsed.get("reply") or _demo_reply(user_text, weakness, topic_hint)["reply"],
         "needs_experiment": bool(parsed.get("needs_experiment")) or weakness,
+        "off_topic": False,
     }
 
 
@@ -107,6 +146,7 @@ def _demo_reply(user_text: str, weakness: bool, topic_hint: str | None) -> dict:
                 "¿Sobre cuál es tu duda?"
             ),
             "needs_experiment": False,
+            "off_topic": True,
         }
 
     meta = TOPICS[topic]
@@ -119,7 +159,12 @@ def _demo_reply(user_text: str, weakness: bool, topic_hint: str | None) -> dict:
     )
     if weakness and meta.get("allows_experiment"):
         reply += "\n\nVeo que este tema se te complica. Te armo un mini-experimento casero."
-    return {"topic": topic, "reply": reply, "needs_experiment": weakness and meta.get("allows_experiment", False)}
+    return {
+        "topic": topic,
+        "reply": reply,
+        "needs_experiment": weakness and meta.get("allows_experiment", False),
+        "off_topic": False,
+    }
 
 
 def _mini_explain(topic: str) -> str:

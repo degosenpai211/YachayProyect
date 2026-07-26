@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.schemas import ChatProcessResult, ZavuWebhookIn
-from app.services.agent import process_student_message
+from app.services.agent import DONE_RE, extract_student_code, process_student_message
 from app.services.elevenlabs_svc import speech_to_text
 from app.services.zavu import send_message
 
@@ -15,14 +15,25 @@ logger = logging.getLogger("yachay.webhook")
 router = APIRouter(tags=["webhook"])
 
 
+def _should_send_thinking_ack(text: str) -> bool:
+    """Ack corto antes de Groq (latencia percibida), salvo flujos rápidos."""
+    if not text or len(text.strip()) < 6:
+        return False
+    if text.lower().startswith("/start"):
+        return False
+    if extract_student_code(text) and len(text.split()) <= 2:
+        return False
+    if DONE_RE.search(text.strip()):
+        return False
+    return True
+
+
 @router.post("/webhook", response_model=ChatProcessResult)
 async def zavu_webhook(
     request: Request,
     db: Session = Depends(get_db),
 ):
-    # Auth de webhook DESACTIVADA temporalmente para el hackathon:
-    # Railway no redeployaba y un secret desfasado dejaba todos los
-    # message.inbound en 401 (bot mudo, Groq en 0 llamadas).
+    # Auth de webhook DESACTIVADA temporalmente para el hackathon.
     raw_body = await request.body()
 
     try:
@@ -47,6 +58,7 @@ async def zavu_webhook(
     logger.info("Webhook inbound sender=%s text_len=%s has_audio=%s", sender, len(text or ""), bool(audio_url))
 
     if not text and audio_url:
+        await send_message(sender, "Un momento, estoy escuchando tu audio… ⏳")
         transcribed = await speech_to_text(audio_url)
         if transcribed:
             text = transcribed
@@ -56,6 +68,9 @@ async def zavu_webhook(
             )
             await send_message(sender, result.reply)
             return result
+
+    if _should_send_thinking_ack(text or ""):
+        await send_message(sender, "Un momento, estoy pensando tu duda… ⏳")
 
     result = await process_student_message(db, sender=sender, text=text)
     await send_message(sender, result.reply)

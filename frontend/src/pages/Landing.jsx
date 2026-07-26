@@ -2,6 +2,9 @@ import { Link } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { fetchHealth, telegramDeepLink } from "../api.js";
 
+const HERO_IMG =
+  "https://images.unsplash.com/photo-1509062522246-3755977927d7?auto=format&fit=crop&w=1920&q=80";
+
 export default function Landing() {
   const [bot, setBot] = useState(import.meta.env.VITE_TELEGRAM_BOT || "YachayBot");
 
@@ -13,38 +16,43 @@ export default function Landing() {
       .catch(() => {});
   }, []);
 
-  const studentLink = telegramDeepLink(bot, "UEBOL-3A");
+  const studentLink = telegramDeepLink(bot, "UEBOL-3A-12");
 
   return (
-    <div className="min-h-screen relative overflow-hidden">
+    <div className="relative min-h-screen overflow-hidden">
       <div
-        className="absolute inset-0 opacity-40"
+        className="absolute inset-0 bg-cover bg-center animate-[kenburns_18s_ease-in-out_infinite_alternate]"
+        style={{ backgroundImage: `url(${HERO_IMG})` }}
+        aria-hidden
+      />
+      <div
+        className="absolute inset-0"
         style={{
-          backgroundImage:
-            "url(\"data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%232f6b3a' fill-opacity='0.08'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E\")",
+          background:
+            "linear-gradient(105deg, rgba(30,77,40,0.88) 0%, rgba(30,77,40,0.55) 45%, rgba(26,46,31,0.25) 100%)",
         }}
       />
 
       <header className="relative z-10 flex items-center justify-between px-6 py-5 md:px-12">
-        <span className="brand text-2xl font-bold tracking-tight text-[var(--leaf-deep)]">Yachay</span>
+        <span className="brand text-2xl font-bold tracking-tight text-white">Yachay</span>
         <Link
           to="/dashboard"
-          className="text-sm font-medium text-[var(--ink)]/70 hover:text-[var(--leaf)] transition"
+          className="text-sm font-medium text-white/80 transition hover:text-white"
         >
           Dashboard docente
         </Link>
       </header>
 
       <main className="relative z-10 mx-auto flex min-h-[calc(100vh-80px)] max-w-5xl flex-col justify-center px-6 pb-16 md:px-12">
-        <p className="animate-rise brand text-5xl font-bold leading-none text-[var(--leaf-deep)] md:text-7xl md:leading-none">
+        <p className="animate-rise brand text-5xl font-bold leading-none text-white md:text-7xl md:leading-none">
           Yachay
         </p>
-        <h1 className="animate-rise-delay mt-5 max-w-xl text-2xl font-semibold leading-snug text-[var(--ink)] md:text-3xl">
-          Tu tutor de ciencias por Telegram, con ejemplos bolivianos.
+        <h1 className="animate-rise-delay mt-5 max-w-xl text-2xl font-semibold leading-snug text-white md:text-3xl">
+          Tutor de ciencias por Telegram, con ejemplos bolivianos.
         </h1>
-        <p className="animate-rise-delay mt-4 max-w-lg text-base text-[var(--ink)]/75 md:text-lg">
-          Pregunta por voz o texto. Detectamos en qué flaqueas y, cuando hace falta, armamos un
-          mini-experimento casero. Tu profe lo ve en el dashboard.
+        <p className="animate-rise-delay mt-4 max-w-lg text-base text-white/85 md:text-lg">
+          El alumno pregunta por chat; detectamos en qué flaquea y, si hace falta, armamos un
+          mini-experimento casero. Tú lo ves en el dashboard.
         </p>
 
         <div className="animate-rise-delay mt-10 flex flex-col gap-3 sm:flex-row sm:items-center">
@@ -52,20 +60,20 @@ export default function Landing() {
             href={studentLink}
             target="_blank"
             rel="noreferrer"
-            className="animate-pulse-soft inline-flex items-center justify-center rounded-xl bg-[var(--leaf)] px-7 py-3.5 text-base font-semibold text-white shadow-lg shadow-[var(--leaf)]/25 transition hover:bg-[var(--leaf-deep)]"
+            className="animate-pulse-soft inline-flex items-center justify-center rounded-xl bg-[var(--sun)] px-7 py-3.5 text-base font-semibold text-[var(--ink)] shadow-lg transition hover:brightness-105"
           >
             Abrir en Telegram
           </a>
           <Link
             to="/dashboard"
-            className="inline-flex items-center justify-center rounded-xl border border-[var(--line)] bg-white/60 px-7 py-3.5 text-base font-semibold text-[var(--ink)] backdrop-blur transition hover:bg-white"
+            className="inline-flex items-center justify-center rounded-xl border border-white/40 bg-white/10 px-7 py-3.5 text-base font-semibold text-white backdrop-blur transition hover:bg-white/20"
           >
             Dashboard docente
           </Link>
         </div>
 
-        <p className="mt-8 text-sm text-[var(--ink)]/50">
-          Al entrar, escribe tu código (ej. <code className="text-[var(--clay)]">UEBOL-3A-12</code>).
+        <p className="mt-8 text-sm text-white/70">
+          Al entrar, escribe tu código (ej. <code className="text-[var(--sun)]">UEBOL-3A-12</code>).
         </p>
       </main>
     </div>

@@ -27,8 +27,18 @@ TOPICS: dict[str, dict] = {
     },
     "sistema_digestivo": {
         "label": "Sistema digestivo",
-        "keywords": ["digestivo", "estomago", "estómago", "intestino", "digestión", "digestion"],
-        "allows_experiment": False,
+        "keywords": [
+            "digestivo",
+            "estomago",
+            "estómago",
+            "intestino",
+            "digestión",
+            "digestion",
+            "salteña",
+            "saltena",
+            "nutriente",
+        ],
+        "allows_experiment": True,
         "example_bo": "Cuando comes un salteña, el estómago empieza a triturar y mezclar con jugos digestivos.",
     },
 }
@@ -94,5 +104,20 @@ EXPERIMENT_TEMPLATES: dict[str, dict] = {
             "3) Abre el circuito: se apaga."
         ),
         "explanation": "La corriente necesita un camino cerrado. Interruptor = abrir/cerrar ese camino.",
+    },
+    "sistema_digestivo": {
+        "title": "Modelo de estómago con bolsa",
+        "materials": "1 bolsa ziploc, 1 galleta o pan, 2 cucharadas de agua, 1 cucharadita de vinagre (opcional)",
+        "steps": (
+            "1) Rompe la galleta en trozos (como los dientes Trituran).\n"
+            "2) Ponla en la bolsa con un poco de agua (saliva).\n"
+            "3) Amasa la bolsa 1 minuto (estómago mezclando).\n"
+            "4) Opcional: agrega vinagre (ácido gástrico) y observa cómo se ablanda más.\n"
+            "5) Anota: ¿en qué se parece a lo que pasa cuando comes una salteña?"
+        ),
+        "explanation": (
+            "La digestión mecánica (masticar/amasar) y química (jugos ácidos) rompen el alimento "
+            "para que el intestino pueda absorber nutrientes."
+        ),
     },
 }

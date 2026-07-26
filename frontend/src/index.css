@@ -61,3 +61,12 @@ h2,
 .animate-pulse-soft {
   animation: pulse-soft 3.5s ease-in-out infinite;
 }
+
+@keyframes kenburns {
+  from {
+    transform: scale(1);
+  }
+  to {
+    transform: scale(1.08);
+  }
+}
