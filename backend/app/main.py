@@ -46,24 +46,12 @@ app = FastAPI(
 )
 
 settings = get_settings()
-origins = settings.cors_origin_list or ["http://localhost:5173"]
-# Siempre permitir Vite local + cualquier sitio *.netlify.app (el dashboard
-# en producción). Si CORS_ORIGINS no incluye el dominio de Netlify, el
-# navegador bloquea /stats y el front cae a datos mock.
-origins = list(
-    set(
-        origins
-        + [
-            "http://localhost:5173",
-            "http://127.0.0.1:5173",
-        ]
-    )
-)
+# CORS amplio para el dashboard en Netlify / localhost. Si se restringe
+# mal CORS_ORIGINS, el navegador bloquea y el front muestra mock.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=origins,
-    allow_origin_regex=r"https://.*\.netlify\.app",
-    allow_credentials=True,
+    allow_origins=["*"],
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -99,4 +87,6 @@ def health():
         "exa": s.has_exa,
         "zavu": s.has_zavu,
         "telegram_bot": s.telegram_bot_username,
+        # Si este valor no aparece en producción, Railway NO redeployó el código nuevo.
+        "code_version": "yachay-2026-07-26-v5",
     }

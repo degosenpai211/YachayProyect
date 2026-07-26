@@ -1,5 +1,6 @@
 # Nota: cualquier edicion a este archivo fuerza a Railway/Railpack a
 # reinstalar dependencias en vez de reusar una capa de build en cache.
+# bump-deploy: 2026-07-26-v5 (forzar redeploy — bot muteado por auth vieja)
 fastapi==0.115.6
 uvicorn[standard]==0.34.0
 sqlalchemy==2.0.36
