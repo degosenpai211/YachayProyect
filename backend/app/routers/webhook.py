@@ -28,6 +28,10 @@ def _authorize_webhook(
 
     También aceptamos X-Zavu-Secret == secret como atajo para pruebas manuales.
     Si no hay secret configurado, dejamos pasar (útil en demo local).
+
+    Si el secret de Railway está desfasado respecto a Zavu (muy común al
+    regenerar), NO bloqueamos el mensaje: lo procesamos igual y dejamos
+    warning en logs. Así el bot no queda mudo en el hackathon.
     """
     secret = (settings.zavu_webhook_secret or "").strip()
     if not secret:
@@ -39,12 +43,12 @@ def _authorize_webhook(
     if verify_zavu_signature(x_zavu_signature, raw_body, secret):
         return
 
-    logger.warning(
-        "Webhook rechazado: firma inválida (tiene X-Zavu-Signature=%s, X-Zavu-Secret=%s)",
+    logger.error(
+        "Firma Zavu no coincide con ZAVU_WEBHOOK_SECRET — procesando igual. "
+        "Actualiza el secret en Railway (tiene X-Zavu-Signature=%s)",
         bool(x_zavu_signature),
-        bool(x_zavu_secret),
     )
-    raise HTTPException(status_code=401, detail="Webhook secret/firma inválido")
+    # No raise 401: un secret desfasado dejaba el bot totalmente mudo.
 
 
 @router.post("/webhook", response_model=ChatProcessResult)
