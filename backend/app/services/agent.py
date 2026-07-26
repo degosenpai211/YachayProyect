@@ -202,16 +202,16 @@ async def process_student_message(
 
         if is_weakness:
             _upsert_weakness(db, student.id, topic, hit_count)
-            # Regenerar respuesta consciente de debilidad (demo/heurística ya lo contempla)
-            tutor = await generate_tutor_reply(text, weakness=True, topic_hint=topic)
-            reply = tutor["reply"]
-            topic = tutor.get("topic") or topic
-
+            # No volvemos a llamar a la IA: reusamos la respuesta ya generada y
+            # solo agregamos el aviso + experimento (plantilla local, sin latencia extra).
             if TOPICS.get(topic, {}).get("allows_experiment"):
+                reply += "\n\nVeo que este tema se te complica. Te armo un mini-experimento casero."
                 exp = _create_experiment(db, student.id, topic)
                 if exp:
                     experiment_created = True
                     reply += _format_experiment(exp)
+            else:
+                reply += "\n\nVeo que este tema se te complica un poco. Sigamos practicando con más preguntas."
 
         # Grounding opcional (no bloquea)
         grounded = await ground_bolivian_example(topic_label(topic), text)

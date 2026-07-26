@@ -74,9 +74,27 @@ class ExperimentOut(BaseModel):
     model_config = {"from_attributes": True}
 
 
-class ZavuWebhookIn(BaseModel):
-    """Payload flexible: acepta formas comunes de Zavu/Telegram-like."""
+class ZavuMessageData(BaseModel):
+    """Contenido real de un evento 'message.inbound' de Zavu."""
 
+    from_: str | None = Field(default=None, alias="from")
+    text: str | None = None
+    message_type: str | None = Field(default=None, alias="messageType")
+    content: dict | None = None
+
+    model_config = {"populate_by_name": True}
+
+
+class ZavuWebhookIn(BaseModel):
+    """Acepta el formato real de Zavu: envelope con 'type' + 'data' anidado
+    (https://docs.zavu.dev/guides/receiving-messages/webhooks). También
+    acepta un formato plano simple como respaldo, útil para pruebas
+    manuales via /webhook/simulate o curl."""
+
+    type: str | None = None
+    data: ZavuMessageData | None = None
+
+    # --- Formato plano de respaldo (compatibilidad / pruebas manuales) ---
     message: str | None = None
     text: str | None = None
     body: str | None = None
@@ -90,11 +108,27 @@ class ZavuWebhookIn(BaseModel):
 
     model_config = {"populate_by_name": True}
 
+    def is_relevant_event(self) -> bool:
+        """Si viene el envelope real de Zavu, solo procesamos mensajes
+        entrantes de texto/audio; ignoramos delivery receipts, etc."""
+        if self.type is not None:
+            return self.type == "message.inbound"
+        return True
+
     def resolved_text(self) -> str:
+        if self.data and self.data.text:
+            return self.data.text.strip()
         return (self.message or self.text or self.body or "").strip()
 
     def resolved_sender(self) -> str:
+        if self.data and self.data.from_:
+            return self.data.from_.strip()
         return (self.telegram_id or self.user_id or self.from_ or self.sender or "anon").strip()
+
+    def resolved_media_url(self) -> str | None:
+        if self.data and self.data.content:
+            return self.data.content.get("mediaUrl") or self.data.content.get("mediaId")
+        return self.audio_url or self.media_url
 
 
 class ChatProcessResult(BaseModel):

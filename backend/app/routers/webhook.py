@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from sqlalchemy.orm import Session
 
@@ -7,6 +9,8 @@ from app.schemas import ChatProcessResult, ZavuWebhookIn
 from app.services.agent import process_student_message
 from app.services.elevenlabs_svc import speech_to_text
 from app.services.zavu import send_message
+
+logger = logging.getLogger("yachay.webhook")
 
 router = APIRouter(tags=["webhook"])
 
@@ -24,9 +28,17 @@ async def zavu_webhook(
     payload = await request.json()
     data = ZavuWebhookIn.model_validate(payload)
 
+    if not data.is_relevant_event():
+        logger.info("Ignorando evento Zavu tipo=%s (no es message.inbound)", data.type)
+        return ChatProcessResult(reply="")
+
     text = data.resolved_text()
     sender = data.resolved_sender()
-    audio_url = data.audio_url or data.media_url
+    audio_url = data.resolved_media_url()
+
+    if not sender or sender == "anon":
+        logger.warning("Webhook Zavu sin remitente identificable: %s", payload)
+        return ChatProcessResult(reply="")
 
     if not text and audio_url:
         transcribed = await speech_to_text(audio_url)
