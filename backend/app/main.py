@@ -7,7 +7,7 @@ from sqlalchemy import text
 
 from app.config import get_settings
 from app.database import Base, SessionLocal, ensure_schema_upgrades, engine
-from app.routers import experiments, stats, students, weaknesses, webhook
+from app.routers import experiments, media, stats, students, weaknesses, webhook
 from app.seed import clear_demo_seed_data, seed_demo_data
 
 logging.basicConfig(
@@ -58,6 +58,7 @@ app.add_middleware(
 )
 
 app.include_router(webhook.router)
+app.include_router(media.router)
 app.include_router(students.router)
 app.include_router(weaknesses.router)
 app.include_router(experiments.router)
@@ -85,9 +86,10 @@ def health():
         "claude": s.has_claude,
         "groq": s.has_groq,
         "elevenlabs": s.has_elevenlabs,
+        "elevenlabs_tts": s.has_elevenlabs_tts,
         "exa": s.has_exa,
         "zavu": s.has_zavu,
         "telegram_bot": s.telegram_bot_username,
         # Si este valor no aparece en producción, Railway NO redeployó el código nuevo.
-        "code_version": "yachay-2026-07-26-v6",
+        "code_version": "yachay-2026-07-26-v7-tts",
     }

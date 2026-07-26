@@ -33,19 +33,58 @@ async def send_message(to: str, text: str) -> bool:
                     "Authorization": f"Bearer {settings.zavu_api_key}",
                     "Content-Type": "application/json",
                 },
-                # La API de Zavu espera el campo "text", no "message".
                 json={"to": recipient, "text": text, "channel": "telegram"},
             )
             if resp.status_code >= 400:
                 logger.warning(
-                    "Zavu respondió %s al enviar a %s: %s",
+                    "Zavu respondió %s al enviar texto a %s: %s",
                     resp.status_code,
                     recipient,
                     resp.text[:300],
                 )
             else:
-                logger.info("Zavu envío OK a %s status=%s", recipient, resp.status_code)
+                logger.info("Zavu texto OK a %s status=%s", recipient, resp.status_code)
             return resp.status_code < 400
     except Exception:
         logger.exception("Fallo enviando mensaje via Zavu")
+        return False
+
+
+async def send_audio(to: str, media_url: str) -> bool:
+    """Envía audio (MP3) por Telegram vía Zavu. media_url debe ser HTTPS público."""
+    settings = get_settings()
+    if not settings.has_zavu:
+        return True
+    recipient = normalize_telegram_recipient(to)
+    if not recipient or not media_url:
+        logger.warning("send_audio sin destinatario o URL (to=%r)", to)
+        return False
+
+    try:
+        async with httpx.AsyncClient(timeout=30) as client:
+            resp = await client.post(
+                settings.zavu_send_url,
+                headers={
+                    "Authorization": f"Bearer {settings.zavu_api_key}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "to": recipient,
+                    "channel": "telegram",
+                    "messageType": "audio",
+                    "content": {"mediaUrl": media_url},
+                },
+            )
+            if resp.status_code >= 400:
+                logger.warning(
+                    "Zavu respondió %s al enviar audio a %s: %s",
+                    resp.status_code,
+                    recipient,
+                    resp.text[:300],
+                )
+            else:
+                logger.info("Zavu audio OK a %s status=%s", recipient, resp.status_code)
+            return resp.status_code < 400
+    except Exception:
+        logger.exception("Fallo enviando audio via Zavu")
         return False

@@ -19,6 +19,9 @@ class Settings(BaseSettings):
     demo_mode: bool = True
     cors_origins: str = "http://localhost:5173,http://127.0.0.1:5173"
     telegram_bot_username: str = "YachayBot"
+    # URL pública HTTPS del backend (para que Zavu descargue MP3 de TTS).
+    # Ej: https://yachayproyect-production.up.railway.app
+    public_base_url: str = ""
 
     @property
     def cors_origin_list(self) -> list[str]:
@@ -35,6 +38,10 @@ class Settings(BaseSettings):
     @property
     def has_elevenlabs(self) -> bool:
         return bool(self.elevenlabs_api_key.strip())
+
+    @property
+    def has_elevenlabs_tts(self) -> bool:
+        return bool(self.elevenlabs_api_key.strip() and self.elevenlabs_voice_id.strip())
 
     @property
     def has_exa(self) -> bool:
