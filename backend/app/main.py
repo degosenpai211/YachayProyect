@@ -8,7 +8,7 @@ from sqlalchemy import text
 from app.config import get_settings
 from app.database import Base, SessionLocal, engine
 from app.routers import experiments, stats, students, weaknesses, webhook
-from app.seed import seed_demo_data
+from app.seed import clear_demo_seed_data, seed_demo_data
 
 logging.basicConfig(
     level=logging.INFO,
@@ -21,14 +21,20 @@ logger = logging.getLogger("yachay")
 async def lifespan(_: FastAPI):
     Base.metadata.create_all(bind=engine)
     settings = get_settings()
-    if settings.demo_mode:
-        db = SessionLocal()
-        try:
+    db = SessionLocal()
+    try:
+        if settings.demo_mode:
             seed_demo_data(db)
-        finally:
-            db.close()
-    else:
-        logger.info("DEMO_MODE=false: se omite el seed de datos de ejemplo")
+        else:
+            # Si antes estuvo DEMO_MODE=true, los Ana/Luis/María siguen en la DB;
+            # los limpiamos para que el dashboard arranque en 0.
+            removed = clear_demo_seed_data(db)
+            if removed:
+                logger.info("DEMO_MODE=false: limpiados %s registros de demo", removed)
+            else:
+                logger.info("DEMO_MODE=false: sin seed de demo; listo para alumnos reales")
+    finally:
+        db.close()
     yield
 
 

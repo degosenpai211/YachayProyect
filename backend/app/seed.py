@@ -1,8 +1,37 @@
-from sqlalchemy import select
+import logging
+
+from sqlalchemy import delete, select
 from sqlalchemy.orm import Session
 
 from app.models import Experiment, Message, Student, Weakness
 from app.services.agent import register_or_get_student
+
+logger = logging.getLogger("yachay.seed")
+
+# Prefijo que usa seed_demo_data en telegram_id (nunca un chat real de Telegram).
+_DEMO_TELEGRAM_PREFIX = "tg_"
+
+
+def clear_demo_seed_data(db: Session) -> int:
+    """Borra alumnos/mensajes sembrados por DEMO_MODE (telegram_id tipo tg_...).
+
+    No toca alumnos reales de Telegram (chat IDs numéricos / telegram:...).
+    """
+    demo_ids = list(
+        db.scalars(
+            select(Student.id).where(Student.telegram_id.startswith(_DEMO_TELEGRAM_PREFIX))
+        ).all()
+    )
+    if not demo_ids:
+        return 0
+
+    db.execute(delete(Message).where(Message.student_id.in_(demo_ids)))
+    db.execute(delete(Weakness).where(Weakness.student_id.in_(demo_ids)))
+    db.execute(delete(Experiment).where(Experiment.student_id.in_(demo_ids)))
+    db.execute(delete(Student).where(Student.id.in_(demo_ids)))
+    db.commit()
+    logger.info("DEMO_MODE=false: eliminados %s alumnos de seed de demo", len(demo_ids))
+    return len(demo_ids)
 
 
 def seed_demo_data(db: Session) -> None:
