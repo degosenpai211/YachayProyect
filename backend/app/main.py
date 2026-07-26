@@ -47,11 +47,22 @@ app = FastAPI(
 
 settings = get_settings()
 origins = settings.cors_origin_list or ["http://localhost:5173"]
-if settings.demo_mode and "*" not in origins:
-    origins = list(set(origins + ["http://localhost:5173", "http://127.0.0.1:5173"]))
+# Siempre permitir Vite local + cualquier sitio *.netlify.app (el dashboard
+# en producción). Si CORS_ORIGINS no incluye el dominio de Netlify, el
+# navegador bloquea /stats y el front cae a datos mock.
+origins = list(
+    set(
+        origins
+        + [
+            "http://localhost:5173",
+            "http://127.0.0.1:5173",
+        ]
+    )
+)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
+    allow_origin_regex=r"https://.*\.netlify\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
