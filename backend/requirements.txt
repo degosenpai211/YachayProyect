@@ -1,3 +1,5 @@
+# Nota: cualquier edicion a este archivo fuerza a Railway/Railpack a
+# reinstalar dependencias en vez de reusar una capa de build en cache.
 fastapi==0.115.6
 uvicorn[standard]==0.34.0
 sqlalchemy==2.0.36
