@@ -1,3 +1,4 @@
+import json
 import logging
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
@@ -9,23 +10,64 @@ from app.schemas import ChatProcessResult, ZavuWebhookIn
 from app.services.agent import process_student_message
 from app.services.elevenlabs_svc import speech_to_text
 from app.services.zavu import send_message
+from app.services.zavu_security import verify_zavu_signature
 
 logger = logging.getLogger("yachay.webhook")
 
 router = APIRouter(tags=["webhook"])
 
 
+def _authorize_webhook(
+    *,
+    settings,
+    raw_body: bytes,
+    x_zavu_signature: str | None,
+    x_zavu_secret: str | None,
+) -> None:
+    """Zavu firma con HMAC en X-Zavu-Signature (docs oficiales).
+
+    También aceptamos X-Zavu-Secret == secret como atajo para pruebas manuales.
+    Si no hay secret configurado, dejamos pasar (útil en demo local).
+    """
+    secret = (settings.zavu_webhook_secret or "").strip()
+    if not secret:
+        return
+
+    if x_zavu_secret and x_zavu_secret == secret:
+        return
+
+    if verify_zavu_signature(x_zavu_signature, raw_body, secret):
+        return
+
+    logger.warning(
+        "Webhook rechazado: firma inválida (tiene X-Zavu-Signature=%s, X-Zavu-Secret=%s)",
+        bool(x_zavu_signature),
+        bool(x_zavu_secret),
+    )
+    raise HTTPException(status_code=401, detail="Webhook secret/firma inválido")
+
+
 @router.post("/webhook", response_model=ChatProcessResult)
 async def zavu_webhook(
     request: Request,
     db: Session = Depends(get_db),
+    x_zavu_signature: str | None = Header(default=None),
     x_zavu_secret: str | None = Header(default=None),
 ):
     settings = get_settings()
-    if settings.zavu_webhook_secret and x_zavu_secret != settings.zavu_webhook_secret:
-        raise HTTPException(status_code=401, detail="Webhook secret inválido")
+    raw_body = await request.body()
+    _authorize_webhook(
+        settings=settings,
+        raw_body=raw_body,
+        x_zavu_signature=x_zavu_signature,
+        x_zavu_secret=x_zavu_secret,
+    )
 
-    payload = await request.json()
+    try:
+        payload = json.loads(raw_body.decode("utf-8") or "{}")
+    except json.JSONDecodeError as exc:
+        raise HTTPException(status_code=400, detail="JSON inválido") from exc
+
     data = ZavuWebhookIn.model_validate(payload)
 
     if not data.is_relevant_event():
@@ -39,6 +81,8 @@ async def zavu_webhook(
     if not sender or sender == "anon":
         logger.warning("Webhook Zavu sin remitente identificable: %s", payload)
         return ChatProcessResult(reply="")
+
+    logger.info("Webhook inbound sender=%s text_len=%s has_audio=%s", sender, len(text or ""), bool(audio_url))
 
     if not text and audio_url:
         transcribed = await speech_to_text(audio_url)

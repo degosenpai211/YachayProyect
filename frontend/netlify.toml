@@ -2,6 +2,12 @@
   command = "npm run build"
   publish = "dist"
 
+# Variables horneadas en el build de Vite. Así el dashboard apunta al
+# backend real aunque falte configurarlas en la UI de Netlify.
+[build.environment]
+  VITE_API_URL = "https://yachayproyect-production.up.railway.app"
+  VITE_TELEGRAM_BOT = "YachayteamBoliviaBot"
+
 [[redirects]]
   from = "/*"
   to = "/index.html"
