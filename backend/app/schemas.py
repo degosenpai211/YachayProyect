@@ -121,9 +121,15 @@ class ZavuWebhookIn(BaseModel):
         return (self.message or self.text or self.body or "").strip()
 
     def resolved_sender(self) -> str:
+        raw = ""
         if self.data and self.data.from_:
-            return self.data.from_.strip()
-        return (self.telegram_id or self.user_id or self.from_ or self.sender or "anon").strip()
+            raw = self.data.from_.strip()
+        else:
+            raw = (self.telegram_id or self.user_id or self.from_ or self.sender or "anon").strip()
+        # Zavu Telegram: "telegram:6115305475" → chat ID numérico para contestar.
+        if raw.lower().startswith("telegram:"):
+            raw = raw.split(":", 1)[1].strip() or "anon"
+        return raw
 
     def resolved_media_url(self) -> str | None:
         if self.data and self.data.content:

@@ -7,12 +7,21 @@ from app.config import get_settings
 logger = logging.getLogger("yachay.zavu")
 
 
+def normalize_telegram_recipient(to: str) -> str:
+    """Zavu a veces manda 'telegram:6115305475'; la API de envío espera el chat ID numérico."""
+    value = (to or "").strip()
+    if value.lower().startswith("telegram:"):
+        value = value.split(":", 1)[1].strip()
+    return value
+
+
 async def send_message(to: str, text: str) -> bool:
     """Envía respuesta por Zavu. En demo/sin clave, solo log lógico (True)."""
     settings = get_settings()
     if not settings.has_zavu:
         return True
-    if not to or not text:
+    recipient = normalize_telegram_recipient(to)
+    if not recipient or not text:
         logger.warning("send_message llamado sin destinatario o texto (to=%r)", to)
         return False
 
@@ -25,10 +34,17 @@ async def send_message(to: str, text: str) -> bool:
                     "Content-Type": "application/json",
                 },
                 # La API de Zavu espera el campo "text", no "message".
-                json={"to": to, "text": text, "channel": "telegram"},
+                json={"to": recipient, "text": text, "channel": "telegram"},
             )
             if resp.status_code >= 400:
-                logger.warning("Zavu respondió %s al enviar mensaje: %s", resp.status_code, resp.text[:300])
+                logger.warning(
+                    "Zavu respondió %s al enviar a %s: %s",
+                    resp.status_code,
+                    recipient,
+                    resp.text[:300],
+                )
+            else:
+                logger.info("Zavu envío OK a %s status=%s", recipient, resp.status_code)
             return resp.status_code < 400
     except Exception:
         logger.exception("Fallo enviando mensaje via Zavu")
