@@ -6,3 +6,6 @@ pydantic-settings==2.7.0
 httpx==0.28.1
 python-multipart==0.0.20
 anthropic==0.42.0
+# Driver de Postgres — necesario solo si DATABASE_URL apunta a Postgres
+# (Railway Postgres, Supabase, etc). No afecta el uso local con SQLite.
+psycopg2-binary==2.9.10

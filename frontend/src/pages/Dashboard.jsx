@@ -1,8 +1,9 @@
 import { Link } from "react-router-dom";
-import { useEffect, useState, useTransition } from "react";
+import { useEffect, useMemo, useState, useTransition } from "react";
 import {
   fetchExperiments,
   fetchStats,
+  fetchStudent,
   fetchStudents,
   fetchWeaknesses,
   API_URL,
@@ -15,6 +16,7 @@ import {
   TOPIC_LABELS,
 } from "../data/mock.js";
 import StatCard from "../components/StatCard.jsx";
+import StudentDetail from "../components/StudentDetail.jsx";
 
 export default function Dashboard() {
   const [stats, setStats] = useState(null);
@@ -22,6 +24,9 @@ export default function Dashboard() {
   const [weaknesses, setWeaknesses] = useState([]);
   const [experiments, setExperiments] = useState([]);
   const [selected, setSelected] = useState(null);
+  const [detail, setDetail] = useState(null);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [detailError, setDetailError] = useState("");
   const [usingMock, setUsingMock] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -69,7 +74,49 @@ export default function Dashboard() {
     };
   }, []);
 
-  const topicLabel = (id) => TOPIC_LABELS[id] || id;
+  // El backend (app/topics.py) es la fuente de verdad de los labels; los de
+  // mock.js son solo fallback offline. Cuando hay datos reales, los del API
+  // tienen prioridad.
+  const topicLabelMap = useMemo(() => {
+    const map = { ...TOPIC_LABELS };
+    for (const t of stats?.topics || []) {
+      map[t.topic] = t.topic_label;
+    }
+    return map;
+  }, [stats]);
+  const topicLabel = (id) => topicLabelMap[id] || id;
+
+  async function openStudent(student) {
+    setSelected(student);
+    setDetail(null);
+    setDetailError("");
+
+    if (usingMock) {
+      setDetail({
+        ...student,
+        messages: [],
+        weaknesses: MOCK_WEAKNESSES.filter((w) => w.student_code === student.code),
+        experiments: MOCK_EXPERIMENTS.filter((e) => e.student_code === student.code),
+      });
+      return;
+    }
+
+    setDetailLoading(true);
+    try {
+      const full = await fetchStudent(student.code);
+      setDetail(full);
+    } catch (err) {
+      setDetailError("No se pudo cargar el detalle del alumno.");
+    } finally {
+      setDetailLoading(false);
+    }
+  }
+
+  function closeStudent() {
+    setSelected(null);
+    setDetail(null);
+    setDetailError("");
+  }
 
   return (
     <div className="min-h-screen px-4 py-6 md:px-10 md:py-8">
@@ -189,7 +236,7 @@ export default function Dashboard() {
                     <tr
                       key={s.id}
                       className="cursor-pointer border-t border-[var(--line)] hover:bg-white/50"
-                      onClick={() => setSelected(s)}
+                      onClick={() => openStudent(s)}
                     >
                       <td className="py-2.5 font-mono text-xs">{s.code}</td>
                       <td className="py-2.5 font-medium">{s.display_name}</td>
@@ -211,11 +258,6 @@ export default function Dashboard() {
                 </tbody>
               </table>
             </div>
-            {selected && (
-              <p className="mt-3 text-sm text-[var(--ink)]/60">
-                Seleccionado: <strong>{selected.display_name}</strong> ({selected.code})
-              </p>
-            )}
           </section>
 
           <section className="mt-6 rounded-2xl border border-[var(--line)] bg-[var(--card)] p-5 backdrop-blur">
@@ -240,6 +282,17 @@ export default function Dashboard() {
             )}
           </section>
         </>
+      )}
+
+      {selected && (
+        <StudentDetail
+          student={selected}
+          detail={detail}
+          loading={detailLoading}
+          error={detailError}
+          topicLabel={topicLabel}
+          onClose={closeStudent}
+        />
       )}
     </div>
   );

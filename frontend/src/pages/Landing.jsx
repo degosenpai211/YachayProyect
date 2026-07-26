@@ -54,7 +54,7 @@ export default function Landing() {
             rel="noreferrer"
             className="animate-pulse-soft inline-flex items-center justify-center rounded-xl bg-[var(--leaf)] px-7 py-3.5 text-base font-semibold text-white shadow-lg shadow-[var(--leaf)]/25 transition hover:bg-[var(--leaf-deep)]"
           >
-            Asistencia básica
+            Abrir en Telegram
           </a>
           <Link
             to="/dashboard"

@@ -85,6 +85,9 @@ export const MOCK_EXPERIMENTS = [
   },
 ];
 
+// Fallback usado solo cuando el backend no responde (modo mock) o como
+// respaldo mientras cargan las stats. La fuente de verdad es
+// backend/app/topics.py — si agregas un tema ahí, actualízalo aquí también.
 export const TOPIC_LABELS = {
   densidad_flotacion: "Densidad y flotación",
   fotosintesis: "Fotosíntesis",

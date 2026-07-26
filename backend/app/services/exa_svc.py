@@ -1,6 +1,10 @@
+import logging
+
 import httpx
 
 from app.config import get_settings
+
+logger = logging.getLogger("yachay.exa")
 
 
 async def ground_bolivian_example(topic_label: str, question: str) -> str | None:
@@ -26,6 +30,7 @@ async def ground_bolivian_example(topic_label: str, question: str) -> str | None
                 },
             )
             if resp.status_code >= 400:
+                logger.warning("Exa respondió %s: %s", resp.status_code, resp.text[:300])
                 return None
             results = resp.json().get("results") or []
             if not results:
@@ -34,4 +39,5 @@ async def ground_bolivian_example(topic_label: str, question: str) -> str | None
             snippet = (first.get("text") or first.get("title") or "").strip()
             return snippet[:280] if snippet else None
     except Exception:
+        logger.exception("Fallo consultando Exa")
         return None

@@ -1,6 +1,10 @@
+import logging
+
 import httpx
 
 from app.config import get_settings
+
+logger = logging.getLogger("yachay.elevenlabs")
 
 
 async def speech_to_text(audio_url: str) -> str | None:
@@ -22,10 +26,12 @@ async def speech_to_text(audio_url: str) -> str | None:
                 data={"model_id": "scribe_v1"},
             )
             if stt.status_code >= 400:
+                logger.warning("ElevenLabs STT respondió %s: %s", stt.status_code, stt.text[:300])
                 return None
             data = stt.json()
             return (data.get("text") or data.get("transcript") or "").strip() or None
     except Exception:
+        logger.exception("Fallo transcribiendo audio con ElevenLabs")
         return None
 
 
@@ -46,7 +52,9 @@ async def text_to_speech(text: str) -> bytes | None:
                 json={"text": text, "model_id": "eleven_multilingual_v2"},
             )
             if resp.status_code >= 400:
+                logger.warning("ElevenLabs TTS respondió %s: %s", resp.status_code, resp.text[:300])
                 return None
             return resp.content
     except Exception:
+        logger.exception("Fallo generando audio con ElevenLabs")
         return None

@@ -1,12 +1,20 @@
+import logging
 from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import text
 
 from app.config import get_settings
 from app.database import Base, SessionLocal, engine
 from app.routers import experiments, stats, students, weaknesses, webhook
 from app.seed import seed_demo_data
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+)
+logger = logging.getLogger("yachay")
 
 
 @asynccontextmanager
@@ -19,6 +27,8 @@ async def lifespan(_: FastAPI):
             seed_demo_data(db)
         finally:
             db.close()
+    else:
+        logger.info("DEMO_MODE=false: se omite el seed de datos de ejemplo")
     yield
 
 
@@ -51,8 +61,20 @@ app.include_router(stats.router)
 @app.get("/health")
 def health():
     s = get_settings()
+    db_ok = True
+    try:
+        db = SessionLocal()
+        try:
+            db.execute(text("SELECT 1"))
+        finally:
+            db.close()
+    except Exception:
+        logger.exception("Fallo el ping a la base de datos en /health")
+        db_ok = False
+
     return {
-        "status": "ok",
+        "status": "ok" if db_ok else "degraded",
+        "database": db_ok,
         "demo_mode": s.demo_mode,
         "claude": s.has_claude,
         "groq": s.has_groq,

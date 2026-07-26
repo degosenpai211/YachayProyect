@@ -1,9 +1,13 @@
+import asyncio
 import json
+import logging
 import re
 
 from app.config import get_settings
 from app.services.groq_svc import call_groq
 from app.topics import TOPICS, classify_topic_heuristic, topic_label
+
+logger = logging.getLogger("yachay.claude")
 
 SYSTEM_PROMPT = """Eres Yachay, tutor escolar boliviano de ciencias para primaria/secundaria.
 Responde en español claro, máximo 120 palabras.
@@ -37,7 +41,9 @@ async def generate_tutor_reply(user_text: str, weakness: bool, topic_hint: str |
     raw: str | None = None
 
     if settings.has_claude:
-        raw = _call_claude(user_payload, settings.anthropic_api_key)
+        # Cliente de Anthropic es sincrono; se corre en un hilo aparte para no
+        # bloquear el event loop de FastAPI mientras espera la respuesta.
+        raw = await asyncio.to_thread(_call_claude, user_payload, settings.anthropic_api_key)
 
     if raw is None and settings.has_groq:
         raw = await call_groq(SYSTEM_PROMPT, user_payload)
@@ -72,6 +78,7 @@ def _call_claude(user_payload: dict, api_key: str) -> str | None:
         )
         return message.content[0].text if message.content else None
     except Exception:
+        logger.exception("Fallo llamando a Claude")
         return None
 
 
